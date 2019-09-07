@@ -3,9 +3,11 @@ FROM golang:buster as builder
 RUN apt update && apt install -y libmagickwand-6.q16-dev
 RUN mkdir /build
 
-WORKDIR /mnt
+COPY main.go server.go go.mod go.sum /build/
 
-RUN go build -o /build/main
+WORKDIR /build
+
+RUN go build -o main
 
 FROM debian:buster-slim
 
