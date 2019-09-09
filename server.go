@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"path/filepath"
 	"strconv"
-	"strings"
 
 	"gopkg.in/gographics/imagick.v2/imagick"
 )
@@ -19,7 +18,12 @@ func loggerHandler(next http.Handler) http.Handler {
 
 func imageHandler(baseDir string, quality uint, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if !strings.HasSuffix(r.URL.Path, ".jpg") {
+		handledExtensions := map[string]bool{
+			".jpg": true,
+			".png": true,
+		}
+
+		if !handledExtensions[filepath.Ext(r.URL.Path)] {
 			// Not an image
 			next.ServeHTTP(w, r)
 			return
@@ -162,9 +166,9 @@ func imageHandler(baseDir string, quality uint, next http.Handler) http.Handler 
 			return
 		}
 
-		if r.FormValue("format") == "webp" {
-			if err := mw.SetFormat("webp"); err != nil {
-				log.Printf("Could not set the format to webp: %v", err)
+		if format := r.FormValue("format"); format != "" {
+			if err := mw.SetFormat(format); err != nil {
+				log.Printf("Could not set the format to %q: %v", format, err)
 				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}
