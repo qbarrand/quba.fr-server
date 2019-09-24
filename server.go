@@ -100,7 +100,7 @@ func imageHandler(baseDir string, quality uint, next http.Handler) http.Handler 
 
 		if !handledExtensions[filepath.Ext(r.URL.Path)] {
 			// Not an image
-			w.WriteHeader(http.StatusInternalServerError)
+			next.ServeHTTP(w, r)
 			return
 		}
 
@@ -150,7 +150,7 @@ func randomHandler(dir string, quality uint) http.Handler {
 			return
 		}
 
-		hexRGB := fmt.Sprintf("#%2X%2X%2X", cr, cg, cb)
+		hexRGB := fmt.Sprintf("#%02X%02X%02X", cr, cg, cb)
 
 		w.Header().Set("X-Quba-Date", selected.Date)
 		w.Header().Set("X-Quba-Location", selected.Location)
@@ -215,10 +215,6 @@ func startServer(addr, dir string, quality uint) error {
 			),
 		),
 	)
-
-	http.Handle("/", loggerHandler(
-		imageHandler(dir, quality, http.NotFoundHandler()),
-	))
 
 	imgDir := filepath.Join(dir, "images", "bg")
 
