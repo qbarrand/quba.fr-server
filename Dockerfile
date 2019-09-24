@@ -1,6 +1,6 @@
 FROM golang:buster as builder
 
-RUN apt update && apt install -y libmagickwand-6.q16-dev git
+RUN apt update && apt install -y libmagickwand-6.q16-dev
 RUN mkdir /build
 
 WORKDIR /build
@@ -11,7 +11,7 @@ RUN go build -o main
 
 FROM debian:buster-slim
 
-RUN apt update && apt install -y libmagickwand-6.q16-6
+RUN apt update && apt install -y libmagickwand-6.q16-6 git
 
 COPY --from=builder /build/main /
 
