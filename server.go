@@ -1,9 +1,12 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
+	"math/rand"
 	"net/http"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strconv"
@@ -13,11 +16,79 @@ import (
 	"gopkg.in/gographics/imagick.v2/imagick"
 )
 
+type bgData struct {
+	File     string
+	Location string
+	Date     string
+}
+
+type ih struct {
+	mw      *imagick.MagickWand
+	quality uint
+}
+
+func (i ih) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	height, width, err := parseDimensions(r)
+	if err != nil {
+		log.Print(err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	if err := resize(i.mw, height, width, i.quality, r.FormValue("format")); err != nil {
+		log.Printf("Could not resize the image: %v", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	if n, err := w.Write(i.mw.GetImageBlob()); err != nil {
+		log.Printf("Could not write the bytes: %v", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	} else {
+		log.Printf("Wrote %d bytes", n)
+	}
+}
+
 func loggerHandler(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		log.Printf("%s %s %s", r.RemoteAddr, r.Method, r.RequestURI)
 		next.ServeHTTP(w, r)
 	})
+}
+
+func parseDimensions(r *http.Request) (uint, uint, error) {
+	var (
+		height uint
+		width  uint
+	)
+
+	const (
+		base = 10
+		bits = 64
+	)
+
+	if heightStr := r.FormValue("height"); heightStr != "" {
+		if height64, err := strconv.ParseUint(heightStr, base, bits); err != nil {
+			return 0, 0, fmt.Errorf("%q: invalid height: %v", heightStr, err)
+		} else {
+			height = uint(height64)
+		}
+	}
+
+	if widthStr := r.FormValue("width"); widthStr != "" {
+		if width64, err := strconv.ParseUint(widthStr, base, bits); err != nil {
+			return 0, 0, fmt.Errorf("%q: invalid width: %v", widthStr, err)
+		} else {
+			width = uint(width64)
+		}
+	}
+
+	if height != 0 && width != 0 {
+		return 0, 0, fmt.Errorf("height and width both set (%dx%d)", height, width)
+	}
+
+	return height, width, nil
 }
 
 func imageHandler(baseDir string, quality uint, next http.Handler) http.Handler {
@@ -29,162 +100,63 @@ func imageHandler(baseDir string, quality uint, next http.Handler) http.Handler 
 
 		if !handledExtensions[filepath.Ext(r.URL.Path)] {
 			// Not an image
-			next.ServeHTTP(w, r)
-			return
-		}
-
-		const (
-			base = 10
-			bits = 64
-		)
-
-		var (
-			height uint
-			width  uint
-		)
-
-		writeBadRequest := func(name, value string) {
-			log.Printf("%s: invalid value %q\n", name, value)
-			w.WriteHeader(http.StatusBadRequest)
-		}
-
-		if heightStr := r.FormValue("height"); heightStr != "" {
-			if height64, err := strconv.ParseUint(heightStr, base, bits); err != nil {
-				writeBadRequest("height", heightStr)
-				return
-			} else {
-				height = uint(height64)
-			}
-		}
-
-		if widthStr := r.FormValue("width"); widthStr != "" {
-			if width64, err := strconv.ParseUint(widthStr, base, bits); err != nil {
-				writeBadRequest("width", widthStr)
-				return
-			} else {
-				width = uint(width64)
-			}
-		}
-
-		if height != 0 && width != 0 {
-			log.Printf("height %d, width %d", height, width)
-			w.WriteHeader(http.StatusBadRequest)
+			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
 		mw := imagick.NewMagickWand()
 
-		path := filepath.Join(baseDir, r.URL.Path)
+		if err := mw.ReadImage(filepath.Join(baseDir, r.URL.Path)); err != nil {
+			log.Print(err)
+			http.NotFound(w, r)
+			return
+		}
 
-		log.Println("Reading " + path)
+		ih{mw: mw, quality: quality}.ServeHTTP(w, r)
+	})
+}
 
-		if err := mw.ReadImage(path); err != nil {
-			log.Printf("Could not open %s: %v", path, err)
+func randomHandler(dir string, quality uint) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fd, err := os.Open(filepath.Join(dir, "db.json"))
+		if err != nil {
+			log.Printf("Could not open the background database: %v", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
-		//
-		// Sampling factor
-		//
+		d := make([]bgData, 0)
 
-		// if err := mw.SetSamplingFactors([]float64{4, 2, 0}); err != nil {
-		// 	log.Printf("Could not set the sampling factors: %v", err)
-		// 	w.WriteHeader(http.StatusInternalServerError)
-		// 	return
-		// }
-
-		//
-		// Resizing
-		//
-
-		if height != 0 || width != 0 {
-			oHeight := mw.GetImageHeight()
-			oWidth := mw.GetImageWidth()
-
-			if width != 0 {
-				ratio := float64(width) / float64(oWidth)
-				height = uint(float64(oHeight) * ratio)
-				goto resize
-			}
-
-			if height != 0 {
-				ratio := float64(height) / float64(oHeight)
-				width = uint(float64(oWidth) * ratio)
-				goto resize
-			}
-
-		resize:
-			log.Printf("Resizing to %dx%d", width, height)
-
-			if err := mw.AdaptiveResizeImage(width, height); err != nil {
-				log.Printf("Could not resize the image to %dx%d: %v", width, height, err)
-				w.WriteHeader(http.StatusInternalServerError)
-				return
-			}
-		}
-
-		//
-		// Quality
-		//
-
-		currentQuality := mw.GetImageCompressionQuality()
-
-		if quality < currentQuality {
-			log.Printf("Lowering the quality from %d to %d", currentQuality, quality)
-
-			if err := mw.SetImageCompressionQuality(quality); err != nil {
-				log.Printf("Could not set the quality to %d: %v", quality, err)
-				w.WriteHeader(http.StatusInternalServerError)
-				return
-			}
-		}
-
-		//
-		// Strip EXIF data
-		//
-
-		if err := mw.StripImage(); err != nil {
-			log.Printf("Could not strip metadata: %v", err)
+		if err := json.NewDecoder(fd).Decode(&d); err != nil {
+			log.Printf("Could not decode bg.json: %v", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
-		//
-		// Interlace
-		//
+		selected := d[rand.Intn(len(d))]
 
-		if err := mw.SetInterlaceScheme(imagick.INTERLACE_JPEG); err != nil {
-			log.Printf("Could not set the interlace method: %v", err)
+		mw := imagick.NewMagickWand()
+
+		if err := mw.ReadImage(filepath.Join(dir, selected.File)); err != nil {
+			log.Print(err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
-		//
-		// Color space
-		//
-
-		if err := mw.SetColorspace(imagick.COLORSPACE_SRGB); err != nil {
-			log.Printf("Could not set the color space: %v", err)
+		cr, cg, cb, err := getMainColor(mw)
+		if err != nil {
+			log.Printf("Could not get the image's main color: %v", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
-		if format := r.FormValue("format"); format != "" {
-			if err := mw.SetFormat(format); err != nil {
-				log.Printf("Could not set the format to %q: %v", format, err)
-				w.WriteHeader(http.StatusInternalServerError)
-				return
-			}
-		}
+		hexRGB := fmt.Sprintf("#%2X%2X%2X", cr, cg, cb)
 
-		if n, err := w.Write(mw.GetImageBlob()); err != nil {
-			log.Printf("Could not write the bytes: %v", err)
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		} else {
-			log.Printf("Wrote %d bytes", n)
-		}
+		w.Header().Set("X-Quba-Date", selected.Date)
+		w.Header().Set("X-Quba-Location", selected.Location)
+		w.Header().Set("X-Quba-MainColor", hexRGB)
+
+		ih{mw: mw, quality: quality}.ServeHTTP(w, r)
 	})
 }
 
@@ -243,6 +215,14 @@ func startServer(addr, dir string, quality uint) error {
 			),
 		),
 	)
+
+	http.Handle("/", loggerHandler(
+		imageHandler(dir, quality, http.NotFoundHandler()),
+	))
+
+	imgDir := filepath.Join(dir, "images", "bg")
+
+	http.Handle("/images/bg/random", loggerHandler(randomHandler(imgDir, quality)))
 
 	return http.ListenAndServe(addr, nil)
 }
