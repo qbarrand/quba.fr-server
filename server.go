@@ -1,10 +1,14 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
+	"os/exec"
 	"path/filepath"
 	"strconv"
+	"strings"
+	"text/template"
 
 	"gopkg.in/gographics/imagick.v2/imagick"
 )
@@ -184,9 +188,51 @@ func imageHandler(baseDir string, quality uint, next http.Handler) http.Handler 
 	})
 }
 
+func sitemapHandler(dir string) (http.Handler, error) {
+	const sitemapTemplateStr = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+	<url>
+		<loc>https://quba.fr/</loc>
+		<lastmod>{{ .LastMod }}</lastmod>
+		<changefreq>monthly</changefreq>
+		<priority>1.0</priority>
+	</url>
+</urlset>`
+
+	sitemapTempate, err := template.New("sitemap").Parse(sitemapTemplateStr)
+	if err != nil {
+		return nil, fmt.Errorf("Could not parse the sitemap template: %v", err)
+	}
+
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		cmd := exec.Command("git", "log", "-1", "--format=%ad", "--date=iso-strict")
+		cmd.Dir = dir
+
+		out, err := cmd.Output()
+		if err != nil {
+			log.Printf("Error while running git: %v", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		date := strings.TrimSuffix(string(out), "\n")
+
+		sitemapTempate.Execute(w, struct{ LastMod string }{date})
+	})
+
+	return handler, nil
+}
+
 func startServer(addr, dir string, quality uint) error {
 	imagick.Initialize()
 	defer imagick.Terminate()
+
+	s, err := sitemapHandler(dir)
+	if err != nil {
+		return err
+	}
+
+	http.Handle("/sitemap.xml", loggerHandler(s))
 
 	http.Handle("/",
 		loggerHandler(

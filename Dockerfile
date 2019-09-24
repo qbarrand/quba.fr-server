@@ -1,6 +1,6 @@
 FROM golang:buster as builder
 
-RUN apt update && apt install -y libmagickwand-6.q16-dev
+RUN apt update && apt install -y libmagickwand-6.q16-dev git
 RUN mkdir /build
 
 COPY main.go server.go go.mod go.sum /build/
