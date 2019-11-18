@@ -5,6 +5,8 @@ import (
 	"os"
 
 	"github.com/urfave/cli"
+
+	"git.quba.fr/qbarrand/quba.fr-server/pkg"
 )
 
 func main() {
@@ -47,7 +49,7 @@ func main() {
 		log.Print("Serving contents from " + dir)
 		log.Print("Starting the server on " + addr)
 
-		return startServer(addr, dir, quality)
+		return pkg.StartServer(addr, dir, quality)
 	}
 
 	if err := app.Run(os.Args); err != nil {

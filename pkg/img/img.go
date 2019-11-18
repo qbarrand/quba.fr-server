@@ -1,4 +1,4 @@
-package main
+package img
 
 import (
 	"fmt"
@@ -7,7 +7,7 @@ import (
 	"gopkg.in/gographics/imagick.v2/imagick"
 )
 
-func resize(mw *imagick.MagickWand, height, width, quality uint, format string) error {
+func Resize(mw *imagick.MagickWand, height, width, quality uint, format string) error {
 	//
 	// Sampling factor
 	//
@@ -93,7 +93,7 @@ func resize(mw *imagick.MagickWand, height, width, quality uint, format string) 
 	return nil
 }
 
-func getMainColor(mw *imagick.MagickWand) (uint, uint, uint, error) {
+func GetMainColor(mw *imagick.MagickWand) (uint, uint, uint, error) {
 	c := mw.Clone()
 
 	if err := c.SetDepth(8); err != nil {
