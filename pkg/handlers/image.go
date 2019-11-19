@@ -70,7 +70,7 @@ func (i ih) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Could not get the main color: %v", err)
 	} else {
 		hexRGB := fmt.Sprintf("#%02X%02X%02X", cr, cg, cb)
-		w.Header().Set("X-Quba-MainColor", hexRGB)
+		w.Header().Set("X-Main-Color", hexRGB)
 	}
 
 	if n, err := w.Write(i.mw.GetImageBlob()); err != nil {
