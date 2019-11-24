@@ -95,6 +95,7 @@ func Resize(mw *imagick.MagickWand, height, width, quality uint, format string) 
 
 func GetMainColor(mw *imagick.MagickWand) (uint, uint, uint, error) {
 	c := mw.Clone()
+	defer c.Destroy()
 
 	if err := c.SetDepth(8); err != nil {
 		return 0, 0, 0, fmt.Errorf("could not set the color depth: %v", err)
