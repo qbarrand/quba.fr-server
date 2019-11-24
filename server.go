@@ -105,6 +105,7 @@ func imageHandler(baseDir string, quality uint, next http.Handler) http.Handler 
 		}
 
 		mw := imagick.NewMagickWand()
+		defer mw.Destroy()
 
 		if err := mw.ReadImage(filepath.Join(baseDir, r.URL.Path)); err != nil {
 			log.Print(err)
