@@ -6,6 +6,7 @@ RUN mkdir /build
 WORKDIR /build
 
 COPY *.go go.mod go.sum ./
+COPY pkg ./pkg
 
 RUN go build -o main
 

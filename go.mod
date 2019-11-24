@@ -1,4 +1,4 @@
-module git.quba.fr/qbarrand/img-mw
+module git.quba.fr/qbarrand/quba.fr-server
 
 go 1.13
 
