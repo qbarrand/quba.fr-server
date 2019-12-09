@@ -11,9 +11,10 @@ import (
 
 func main() {
 	var (
-		addr    string
-		dir     string
-		quality uint
+		addr     string
+		cacheDir string
+		dir      string
+		quality  uint
 	)
 
 	app := cli.NewApp()
@@ -27,6 +28,12 @@ func main() {
 			EnvVar:      "ADDR",
 			Value:       ":8080",
 			Destination: &addr,
+		},
+		cli.StringFlag{
+			Name:        "cache",
+			Usage:       "the cache directory on the filesystem",
+			EnvVar:      "CACHE_DIR",
+			Destination: &cacheDir,
 		},
 		cli.StringFlag{
 			Name:        "dir",
@@ -49,7 +56,7 @@ func main() {
 		log.Print("Serving contents from " + dir)
 		log.Print("Starting the server on " + addr)
 
-		return pkg.StartServer(addr, dir, quality)
+		return pkg.StartServer(addr, dir, quality, cacheDir)
 	}
 
 	if err := app.Run(os.Args); err != nil {

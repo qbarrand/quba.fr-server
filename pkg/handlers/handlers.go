@@ -12,7 +12,8 @@ import (
 	"text/template"
 	"time"
 
-	"gopkg.in/gographics/imagick.v2/imagick"
+	"git.quba.fr/qbarrand/quba.fr-server/pkg/handlers/image"
+	"git.quba.fr/qbarrand/quba.fr-server/pkg/img/cache"
 )
 
 type healthCache struct {
@@ -77,7 +78,7 @@ func Health() http.Handler {
 	})
 }
 
-func Image(baseDir string, quality uint, next http.Handler) http.Handler {
+func Image(baseDir string, quality uint, cachedDir string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		handledExtensions := map[string]bool{
 			".jpg": true,
@@ -90,23 +91,7 @@ func Image(baseDir string, quality uint, next http.Handler) http.Handler {
 			return
 		}
 
-		mw := imagick.NewMagickWand()
-		defer mw.Destroy()
-
-		if err := mw.ReadImage(filepath.Join(baseDir, r.URL.Path)); err != nil {
-			log.Print(err)
-			http.NotFound(w, r)
-			return
-		}
-
-		ih{mw: mw, quality: quality}.ServeHTTP(w, r)
-	})
-}
-
-func Logger(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		log.Printf("%s %s %s", r.RemoteAddr, r.Method, r.RequestURI)
-		next.ServeHTTP(w, r)
+		image.New(baseDir, cache.FsCache(cachedDir), quality).ServeHTTP(w, r)
 	})
 }
 
