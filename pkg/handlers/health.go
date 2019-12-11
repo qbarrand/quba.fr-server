@@ -10,20 +10,24 @@ import (
 
 const secondsBetweenChecks = 120
 
-type healthCache struct {
-	lastCheck time.Time
-	value     bool
+type (
+	healthCache struct {
+		lastCheck time.Time
+		value     bool
 
-	m sync.Mutex
-}
+		m sync.Mutex
+	}
 
-type health struct {
-	cache *healthCache
-}
+	health struct {
+		cache       *healthCache
+		dnsQueryier func(string) ([]string, error)
+	}
+)
 
 func Health() http.Handler {
 	return &health{
-		cache: &healthCache{},
+		cache:       &healthCache{},
+		dnsQueryier: net.LookupTXT,
 	}
 }
 
@@ -39,7 +43,7 @@ func (h *health) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	} else {
 		log.Printf("Older than %d seconds; cache invalidated", secondsBetweenChecks)
 
-		records, err := net.LookupTXT(fqdn)
+		records, err := h.dnsQueryier(fqdn)
 		if err != nil {
 			log.Print(err)
 			w.WriteHeader(http.StatusInternalServerError)
