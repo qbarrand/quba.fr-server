@@ -8,13 +8,20 @@ import (
 
 type ImageFileKey struct {
 	filename string
+	format   string
 	height   int
 	quality  uint
 	width    int
 }
 
-func NewImageFileKey(f string, w, h int, q uint) *ImageFileKey {
-	return &ImageFileKey{filename: f, height: h, quality: q, width: w}
+func NewImageFileKey(f string, w, h int, q uint, fmt string) *ImageFileKey {
+	return &ImageFileKey{
+		filename: f,
+		format:   fmt,
+		height:   h,
+		quality:  q,
+		width:    w,
+	}
 }
 
 func (ifk *ImageFileKey) Key() string {
@@ -25,5 +32,5 @@ func (ifk *ImageFileKey) Key() string {
 	heightStr := strconv.Itoa(ifk.height)
 	qualityStr := strconv.Itoa(int(ifk.quality))
 
-	return strings.Join([]string{name, widthStr, heightStr, qualityStr}, "_") + ext
+	return strings.Join([]string{name, widthStr, heightStr, qualityStr, ifk.format}, "_") + ext
 }

@@ -2,9 +2,8 @@ package cache
 
 import (
 	"bufio"
-	"encoding/hex"
 	"encoding/json"
-	"hash/fnv"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -16,26 +15,26 @@ func New(path string) FsCache {
 	return FsCache(path)
 }
 
-func (c FsCache) Add(key Key, r io.Reader, mainColor string) error {
+func (c FsCache) Add(key Key, r io.Reader, mainColor, hash string) error {
 	path := c.getDataFile(key)
 
-	fd, err := os.OpenFile(path, os.O_WRONLY, 0755)
+	// Create the parent directory
+	if err := os.MkdirAll(filepath.Dir(path), os.ModeDir|0755); err != nil {
+		return fmt.Errorf("could not create the parent directory: %v", err)
+	}
+
+	fd, err := os.Create(path)
 	if err != nil {
 		return err
 	}
 	defer fd.Close()
 
-	h := fnv.New64a()
-
-	w := io.MultiWriter(fd, h)
-
-	_, err = bufio.NewReader(r).WriteTo(w)
-	if err != nil {
+	if _, err := bufio.NewReader(r).WriteTo(fd); err != nil {
 		return err
 	}
 
 	m := &jsonMetadata{
-		HashStr:      hex.EncodeToString(h.Sum(nil)),
+		HashStr:      hash,
 		MainColorStr: mainColor,
 	}
 

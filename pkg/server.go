@@ -10,6 +10,8 @@ import (
 	"gopkg.in/gographics/imagick.v2/imagick"
 
 	"git.quba.fr/qbarrand/quba.fr-server/pkg/handlers"
+	"git.quba.fr/qbarrand/quba.fr-server/pkg/handlers/image"
+	"git.quba.fr/qbarrand/quba.fr-server/pkg/img/cache"
 )
 
 func Logger(next http.Handler) http.Handler {
@@ -50,10 +52,10 @@ func StartServer(addr, dir string, quality uint, cacheDir string) error {
 
 	r.Handle("/sitemap.xml", sitemapHandler)
 
-	imageHandler := handlers.Image(dir, quality, cacheDir)
+	imageHandler := image.NewHandler(dir, cache.FsCache(cacheDir), quality)
 
 	r.PathPrefix("/").
-		HeadersRegexp("Accept", "image/(jpeg|png|ico)").
+		HeadersRegexp("Accept", "image/(ico|jpeg|jxr|png|webp)").
 		Handler(imageHandler)
 
 	r.PathPrefix("/").

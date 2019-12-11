@@ -6,14 +6,10 @@ import (
 	"net"
 	"net/http"
 	"os/exec"
-	"path/filepath"
 	"strings"
 	"sync"
 	"text/template"
 	"time"
-
-	"git.quba.fr/qbarrand/quba.fr-server/pkg/handlers/image"
-	"git.quba.fr/qbarrand/quba.fr-server/pkg/img/cache"
 )
 
 type healthCache struct {
@@ -75,23 +71,6 @@ func Health() http.Handler {
 		} else {
 			w.WriteHeader(http.StatusOK)
 		}
-	})
-}
-
-func Image(baseDir string, quality uint, cachedDir string) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		handledExtensions := map[string]bool{
-			".jpg": true,
-			".png": true,
-		}
-
-		if !handledExtensions[filepath.Ext(r.URL.Path)] {
-			// Not an image
-			next.ServeHTTP(w, r)
-			return
-		}
-
-		image.New(baseDir, cache.FsCache(cachedDir), quality).ServeHTTP(w, r)
 	})
 }
 
