@@ -1,7 +1,6 @@
-package image
+package handlers
 
 import (
-	"bufio"
 	"bytes"
 	"fmt"
 	"io"
@@ -64,21 +63,21 @@ func parseDimensions(r *http.Request) (uint, uint, error) {
 	return height, width, nil
 }
 
-type Handler struct {
+type image struct {
 	baseDir string
 	cache   cache.Cache
 	quality uint
 }
 
-func NewHandler(baseDir string, cache cache.Cache, quality uint) *Handler {
-	return &Handler{
+func Image(baseDir string, cache cache.Cache, quality uint) http.Handler {
+	return &image{
 		baseDir: baseDir,
 		cache:   cache,
 		quality: quality,
 	}
 }
 
-func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (i image) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Parse the requested dimensions
 	height, width, err := parseDimensions(r)
 	if err != nil {
@@ -110,12 +109,15 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ifNoneMatchHeader := r.Header.Get("If-None-Match")
 
 	// Try to get the image from the cache
-	key := cache.NewImageFileKey(filePath, int(width), int(height), h.quality, imFormat)
+	key := cache.NewImageFileKey(filePath, int(width), int(height), i.quality, imFormat)
 
-	cachedImgReader, metadata, err := h.cache.Get(key)
+	cachedImgReader, metadata, err := i.cache.Get(key)
+
+	_ = cachedImgReader
+	_ = metadata
 
 	if err == nil {
-
+		// TODO
 	}
 
 	// Otherwise, serve the image normally
@@ -124,7 +126,7 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	mw := imagick.NewMagickWand()
 	defer mw.Destroy()
 
-	if err := mw.ReadImage(filepath.Join(h.baseDir, filePath)); err != nil {
+	if err := mw.ReadImage(filepath.Join(i.baseDir, filePath)); err != nil {
 		log.Print(err)
 		http.NotFound(w, r)
 		return
@@ -132,7 +134,7 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("ImageMagick format: %q", imFormat)
 
-	if err := img.Resize(mw, height, width, h.quality, imFormat); err != nil {
+	if err := img.Resize(mw, height, width, i.quality, imFormat); err != nil {
 		log.Printf("Could not resize the image: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -169,7 +171,7 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.cache.Add(key, rd, mainColorHexRGB, hash); err != nil {
+	if err := i.cache.Add(key, rd, mainColorHexRGB, hash); err != nil {
 		log.Printf("Could not add the image to the cache: %v", err)
 	}
 }
@@ -190,25 +192,23 @@ func writeFromStream(w http.ResponseWriter, r io.WriterTo, ETag, mainColor strin
 	return nil
 }
 
-func
-
-func serveFromCache(w http.ResponseWriter, cachedImg io.Reader, metadata cache.Metadata) error {
-		cacheEtag := metadata.Hash()
-
-		if ifNoneMatchHeader == cacheEtag {
-			w.WriteHeader(http.StatusNotModified)
-		} else {
-			log.Printf("Rendering %s from the cache", filePath)
-
-			if err := writeFromStream(w, bufio.NewReader(cachedImgReader), cacheEtag, metadata.MainColor()); err != nil {
-				log.Print(err)
-				return
-			}
-
-			if err := cachedImgReader.Close(); err != nil {
-				log.Printf("Could not close the cached file: %v", err)
-			}
-		}
-
-		return
-}
+//func serveFromCache(w http.ResponseWriter, cachedImg io.Reader, metadata cache.Metadata) error {
+//	cacheEtag := metadata.Hash()
+//
+//	if ifNoneMatchHeader == cacheEtag {
+//		w.WriteHeader(http.StatusNotModified)
+//	} else {
+//		log.Printf("Rendering %s from the cache", filePath)
+//
+//		if err := writeFromStream(w, bufio.NewReader(cachedImgReader), cacheEtag, metadata.MainColor()); err != nil {
+//			log.Print(err)
+//			return
+//		}
+//
+//		if err := cachedImgReader.Close(); err != nil {
+//			log.Printf("Could not close the cached file: %v", err)
+//		}
+//	}
+//
+//	return
+//}
