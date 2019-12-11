@@ -3,7 +3,6 @@ on: [push]
 jobs:
 
   build:
-    name: Build
     runs-on: ubuntu-18.04
     steps:
 
@@ -14,7 +13,7 @@ jobs:
       id: go
 
     - name: Install ImageMagick 6
-      run: apt install -y imagemagick
+      run: sudo apt install -y imagemagick
 
     - name: Check out code into the Go module directory
       uses: actions/checkout@v1
