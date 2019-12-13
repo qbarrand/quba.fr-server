@@ -10,7 +10,7 @@ import (
 	"gopkg.in/gographics/imagick.v2/imagick"
 
 	"git.quba.fr/qbarrand/quba.fr-server/pkg/handlers"
-	"git.quba.fr/qbarrand/quba.fr-server/pkg/img/cache"
+	"git.quba.fr/qbarrand/quba.fr-server/pkg/image/cache"
 )
 
 func Logger(next http.Handler) http.Handler {
