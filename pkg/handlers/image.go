@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -10,33 +11,48 @@ import (
 	"strconv"
 	"strings"
 
-	"gopkg.in/gographics/imagick.v2/imagick"
-
 	img "git.quba.fr/qbarrand/quba.fr-server/pkg/image"
 	"git.quba.fr/qbarrand/quba.fr-server/pkg/image/cache"
 )
 
-func mimeToIMFormat(mimeType string) (string, error) {
-	switch mimeType {
-	case "image/jpeg":
-		return "jpg", nil
-	case "image/webp":
-		return "webp", nil
-	case "image/vnd.ms-photo", "image/jxr":
-		return "jxr", nil
-	default:
-		return "", fmt.Errorf("%q: unhandled MIME type", mimeType)
+func getPreferredIMFormat(accept string) string {
+	for _, MIMEType := range strings.Split(accept, ",") {
+		MIMEType = strings.Trim(MIMEType, " ")
+
+		switch MIMEType {
+		case "image/jpeg":
+			return "jpg"
+		case "image/webp":
+			return "webp"
+		case "image/vnd.ms-photo", "image/jxr":
+			return "jxr"
+		}
 	}
+
+	return ""
 }
+
+// func mimeToIMFormat(mimeType string) (string, error) {
+// 	switch mimeType {
+// 	case "image/jpeg":
+// 		return "jpg", nil
+// 	case "image/webp":
+// 		return "webp", nil
+// 	case "image/vnd.ms-photo", "image/jxr":
+// 		return "jxr", nil
+// 	default:
+// 		return "", fmt.Errorf("%q: unhandled MIME type", mimeType)
+// 	}
+// }
 
 func imFormatToMIME(imFormat string) (string, error) {
 	switch imFormat {
 	case "jpg":
-		return "image/jpeg", nil
+		return "Image/jpeg", nil
 	case "jxr":
-		return "image/jxr", nil
+		return "Image/jxr", nil
 	case "webp":
-		return "image/webp", nil
+		return "Image/webp", nil
 	default:
 		return "", fmt.Errorf("%q: unhandled ImageMagick format", imFormat)
 	}
@@ -76,32 +92,33 @@ func parseDimensions(r *http.Request) (uint, uint, error) {
 	return height, width, nil
 }
 
-type image struct {
-	baseDir       string
-	cache         cache.Cache
-	processorCtor func(string) (img.Processor, error)
-	quality       uint
+type Image struct {
+	baseDir            string
+	cache              cache.Cache
+	imageProcessorCtor func(string) (imageProcessor, error)
+	quality            uint
 }
 
-func Image(baseDir string, cache cache.Cache, quality uint) http.Handler {
-	processorCtor := func(path string) (img.Processor, error) {
+func NewImage(baseDir string, cache cache.Cache, quality uint) *Image {
+	imageProcessorCtor := func(path string) (imageProcessor, error) {
 		p, err := img.NewImagickProcessor(path)
+		p, err := imagick.File
 		if err != nil {
 			return nil, err
 		}
 
-		return img.Processor(p), nil
+		return imageProcessor(p), nil
 	}
 
-	return &image{
-		baseDir:       baseDir,
-		cache:         cache,
-		processorCtor: processorCtor,
-		quality:       quality,
+	return &Image{
+		baseDir:            baseDir,
+		cache:              cache,
+		imageProcessorCtor: imageProcessorCtor,
+		quality:            quality,
 	}
 }
 
-func (i image) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (i Image) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Parse the requested dimensions
 	height, width, err := parseDimensions(r)
 	if err != nil {
@@ -110,34 +127,22 @@ func (i image) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get the requested format
+	// Find the Image
 	accept := r.Header.Get("Accept")
-
-	if accept == "" {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
 
 	log.Print("Accept: " + accept)
 
-	imFormat := ""
-
-	if accept != "" {
-		for _, MIMEType := range strings.Split(accept, ",") {
-			MIMEType = strings.Trim(MIMEType, " ")
-
-			var err error
-
-			if imFormat, err = mimeToIMFormat(MIMEType); err == nil {
-				break
-			}
-		}
+	imFormat := getPreferredIMFormat(accept)
+	if imFormat == "" {
+		log.Printf("No accepted format among %q", accept)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
 	}
 
 	filePath := r.URL.Path
 	ifNoneMatchHeader := r.Header.Get("If-None-Match")
 
-	// Try to get the image from the cache
+	// Use this cache key to either get the image from the cache, or to store the controller's output.
 	key := cache.NewImageFileKey(filePath, int(width), int(height), i.quality, imFormat)
 
 	if i.cache == nil {
@@ -153,34 +158,44 @@ func (i image) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Otherwise, serve the image normally
-	log.Printf("Could not get the image from the cache: %v", err)
+	// Otherwise, serve the Image normally
+	log.Printf("Could not get the Image from the cache: %v", err)
 
 	imagePath := filepath.Join(i.baseDir, filePath)
 
-	p, err := i.processorGetter(imagePath)
-	defer p.Destroy()
-
-	if err := mw.ReadImage(filepath.Join(i.baseDir, filePath)); err != nil {
-		log.Print(err)
-		http.NotFound(w, r)
+	p, err := i.imageControllerCtor(imagePath)
+	if err != nil {
+		log.Printf("could not create the image controller: %v", err)
+		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 
+	defer p.Destroy()
+
 	log.Printf("ImageMagick format: %q", imFormat)
 
-	if err := image.Resize(mw, height, width, i.quality, imFormat); err != nil {
-		log.Printf("Could not resize the image: %v", err)
+	if err := p.Resize(height, width); err != nil {
+		log.Printf("Could not resize the Image: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	cr, cg, cb, err := image.GetMainColor(mw)
+	if err := p.SetQuality(i.quality); err != nil {
+		log.Printf("Could not set the quality to %d: %v", i.quality, err)
+	}
+
+	if err := p.Convert(imFormat); err != nil {
+		log.Printf("Could not convert to %q: %v", imFormat, err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	cr, cg, cb, err := p.MainColor()
 	if err != nil {
 		log.Printf("Could not get the main color: %v", err)
 	}
 
-	imageBytes := mw.GetImageBlob()
+	imageBytes := p.Bytes()
 
 	hash, err := cache.HashBytes(imageBytes)
 	if err != nil {
@@ -206,9 +221,35 @@ func (i image) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := i.cache.Add(key, rd, mainColorHexRGB, hash); err != nil {
-		log.Printf("Could not add the image to the cache: %v", err)
+	if i.cache != nil {
+		if err := i.cache.Add(key, rd, mainColorHexRGB, hash); err != nil {
+			log.Printf("Could not add the Image to the cache: %v", err)
+		}
 	}
+}
+
+func (i Image) NewServeHTTP(w http.ResponseWriter, r *http.Request) {
+	// Parse the requested dimensions
+	height, width, err := parseDimensions(r)
+	if err != nil {
+		log.Print(err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	accept
+
+	imFormat, err := mimeToIMFormat()
+
+	key := cache.NewImageFileKey(r.URL.Path, width, height, i.quality)
+}
+
+func serveFromCache(w http.ResponseWriter, r io.Reader, metadata cache.Metadata) error {
+	return errors.New("not implemented")
+}
+
+func serveFromController(w http.ResponseWriter, path string) error {
+
 }
 
 func writeFromStream(w http.ResponseWriter, r io.WriterTo, ETag, mainColor string) error {
@@ -226,24 +267,3 @@ func writeFromStream(w http.ResponseWriter, r io.WriterTo, ETag, mainColor strin
 
 	return nil
 }
-
-//func serveFromCache(w http.ResponseWriter, cachedImg io.Reader, metadata cache.Metadata) error {
-//	cacheEtag := metadata.Hash()
-//
-//	if ifNoneMatchHeader == cacheEtag {
-//		w.WriteHeader(http.StatusNotModified)
-//	} else {
-//		log.Printf("Rendering %s from the cache", filePath)
-//
-//		if err := writeFromStream(w, bufio.NewReader(cachedImgReader), cacheEtag, metadata.MainColor()); err != nil {
-//			log.Print(err)
-//			return
-//		}
-//
-//		if err := cachedImgReader.Close(); err != nil {
-//			log.Printf("Could not close the cached file: %v", err)
-//		}
-//	}
-//
-//	return
-//}

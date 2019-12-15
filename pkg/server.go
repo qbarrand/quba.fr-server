@@ -51,7 +51,7 @@ func StartServer(addr, dir string, quality uint, cacheDir string) error {
 
 	r.Handle("/sitemap.xml", sitemapHandler)
 
-	imageHandler := handlers.Image(dir, cache.FsCache(cacheDir), quality)
+	imageHandler := handlers.NewImage(dir, cache.FsCache(cacheDir), quality)
 
 	r.PathPrefix("/").
 		HeadersRegexp("Accept", "image/(ico|jpeg|jxr|png|webp)").

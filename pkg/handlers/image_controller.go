@@ -1,6 +1,8 @@
-package image
+//go:generate mockgen -source image_controller.go -destination mock_handlers/mock_image_controller.go ImageController
 
-type Processor interface {
+package handlers
+
+type ImageController interface {
 	Bytes() []byte
 	Convert(string) error
 	Destroy()

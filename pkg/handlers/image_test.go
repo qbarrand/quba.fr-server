@@ -3,12 +3,15 @@ package handlers
 import (
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
+
+	"github.com/golang/mock/gomock"
+
+	"git.quba.fr/qbarrand/quba.fr-server/pkg/handlers/mock_handlers"
 )
 
 func TestImage(t *testing.T) {
-	if Image("", nil, 0) == nil {
+	if NewImage("", nil, 0) == nil {
 		t.Fatal("Should not return nil")
 	}
 }
@@ -18,7 +21,7 @@ func TestImage_ServeHTTP(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/non-existent-file.jpg", nil)
 		w := httptest.NewRecorder()
 
-		Image("testdata", nil, 80).ServeHTTP(w, req)
+		NewImage("testdata", nil, 80).ServeHTTP(w, req)
 
 		res := w.Result()
 
@@ -29,11 +32,11 @@ func TestImage_ServeHTTP(t *testing.T) {
 
 	t.Run("non-existing file: HTTP 404", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/non-existent-file.jpg", nil)
-		req.Header.Set("Accept", "image/jpeg")
+		req.Header.Set("Accept", "Image/jpeg")
 
 		w := httptest.NewRecorder()
 
-		Image("testdata", nil, 80).ServeHTTP(w, req)
+		NewImage("testdata", nil, 80).ServeHTTP(w, req)
 
 		res := w.Result()
 
@@ -42,25 +45,41 @@ func TestImage_ServeHTTP(t *testing.T) {
 		}
 	})
 
-	t.Run("Accept: image/webp", func(t *testing.T) {
+	t.Run("Accept: Image/webp", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/gopher_biplane.jpg", nil)
-		req.Header.Set("Accept", "image/webp")
+		req.Header.Set("Accept", "Image/webp")
 
 		w := httptest.NewRecorder()
 
-		Image("testdata", nil, 80).ServeHTTP(w, req)
+		c := gomock.NewController(t)
+		m := mock_handlers.NewMockImageController(c)
 
-		wd, err := os.Getwd()
-		if err != nil {
-			t.Fatal(err)
+		i := NewImage("testdata", nil, 80)
+		i.imageControllerCtor = func(string) (ImageController, error) {
+			return m, nil
 		}
 
-		t.Logf("wd: %s", wd)
+		gomock.InOrder(
+			m.EXPECT().Resize(uint(0), uint(0)),
+			m.EXPECT().SetQuality(uint(80)),
+			m.EXPECT().Convert("webp"),
+			m.EXPECT().MainColor(),
+			m.EXPECT().Bytes(),
+			m.EXPECT().Destroy(),
+		)
+
+		i.ServeHTTP(w, req)
 
 		res := w.Result()
 
 		if res.StatusCode != http.StatusOK {
 			t.Fatalf("Got HTTP %d", res.StatusCode)
 		}
+
+		// resize := m.EXPECT().Resize(0, 0)
+		// convert := m.EXPECT().Convert("webp").After(resize)
+		// mainColor := m.EXPECT().MainColor().After(convert)
+		// bytes := m.EXPECT().MainColor().After(mainColor)
+		// m.EXPECT().Destroy().After(bytes)
 	})
 }
