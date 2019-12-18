@@ -32,7 +32,7 @@ func TestImage_ServeHTTP(t *testing.T) {
 
 	t.Run("non-existing file: HTTP 404", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/non-existent-file.jpg", nil)
-		req.Header.Set("Accept", "Image/jpeg")
+		req.Header.Set("Accept", "image/jpeg")
 
 		w := httptest.NewRecorder()
 
@@ -45,9 +45,9 @@ func TestImage_ServeHTTP(t *testing.T) {
 		}
 	})
 
-	t.Run("Accept: Image/webp", func(t *testing.T) {
+	t.Run("Accept: image/webp", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/gopher_biplane.jpg", nil)
-		req.Header.Set("Accept", "Image/webp")
+		req.Header.Set("Accept", "image/webp")
 
 		w := httptest.NewRecorder()
 

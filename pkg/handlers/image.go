@@ -48,11 +48,11 @@ func getPreferredIMFormat(accept string) string {
 func imFormatToMIME(imFormat string) (string, error) {
 	switch imFormat {
 	case "jpg":
-		return "Image/jpeg", nil
+		return "image/jpeg", nil
 	case "jxr":
-		return "Image/jxr", nil
+		return "image/jxr", nil
 	case "webp":
-		return "Image/webp", nil
+		return "image/webp", nil
 	default:
 		return "", fmt.Errorf("%q: unhandled ImageMagick format", imFormat)
 	}
@@ -134,7 +134,7 @@ func (i Image) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	imFormat := getPreferredIMFormat(accept)
 	if imFormat == "" {
 		log.Printf("No accepted format among %q", accept)
-		w.WriteHeader(http.StatusInternalServerError)
+		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
