@@ -18,6 +18,9 @@ jobs:
     - name: Check out code into the Go module directory
       uses: actions/checkout@v1
 
+    - name: Install mockgen
+      run: go get github.com/golang/mock/mockgen
+
     - run: go build
     - run: go vet ./...
     - run: go test ./...

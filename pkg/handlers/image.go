@@ -93,28 +93,27 @@ func parseDimensions(r *http.Request) (uint, uint, error) {
 }
 
 type Image struct {
-	baseDir            string
-	cache              cache.Cache
-	imageProcessorCtor func(string) (imageProcessor, error)
-	quality            uint
+	baseDir             string
+	cache               cache.Cache
+	imageControllerCtor func(string) (imageController, error)
+	quality             uint
 }
 
 func NewImage(baseDir string, cache cache.Cache, quality uint) *Image {
-	imageProcessorCtor := func(path string) (imageProcessor, error) {
+	imageProcessorCtor := func(path string) (imageController, error) {
 		p, err := img.NewImagickProcessor(path)
-		p, err := imagick.File
 		if err != nil {
 			return nil, err
 		}
 
-		return imageProcessor(p), nil
+		return imageController(p), nil
 	}
 
 	return &Image{
-		baseDir:            baseDir,
-		cache:              cache,
-		imageProcessorCtor: imageProcessorCtor,
-		quality:            quality,
+		baseDir:             baseDir,
+		cache:               cache,
+		imageControllerCtor: imageProcessorCtor,
+		quality:             quality,
 	}
 }
 
@@ -228,29 +227,13 @@ func (i Image) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (i Image) NewServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// Parse the requested dimensions
-	height, width, err := parseDimensions(r)
-	if err != nil {
-		log.Print(err)
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
-	accept
-
-	imFormat, err := mimeToIMFormat()
-
-	key := cache.NewImageFileKey(r.URL.Path, width, height, i.quality)
-}
-
 func serveFromCache(w http.ResponseWriter, r io.Reader, metadata cache.Metadata) error {
 	return errors.New("not implemented")
 }
 
-func serveFromController(w http.ResponseWriter, path string) error {
-
-}
+//func serveFromController(w http.ResponseWriter, path string) error {
+//
+//}
 
 func writeFromStream(w http.ResponseWriter, r io.WriterTo, ETag, mainColor string) error {
 	headers := w.Header()

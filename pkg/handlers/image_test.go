@@ -52,10 +52,10 @@ func TestImage_ServeHTTP(t *testing.T) {
 		w := httptest.NewRecorder()
 
 		c := gomock.NewController(t)
-		m := mock_handlers.NewMockImageController(c)
+		m := mock_handlers.NewMockimageController(c)
 
 		i := NewImage("testdata", nil, 80)
-		i.imageControllerCtor = func(string) (ImageController, error) {
+		i.imageControllerCtor = func(string) (imageController, error) {
 			return m, nil
 		}
 

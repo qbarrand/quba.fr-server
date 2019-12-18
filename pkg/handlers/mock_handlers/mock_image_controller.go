@@ -9,31 +9,31 @@ import (
 	reflect "reflect"
 )
 
-// MockImageController is a mock of ImageController interface
-type MockImageController struct {
+// MockimageController is a mock of imageController interface
+type MockimageController struct {
 	ctrl     *gomock.Controller
-	recorder *MockImageControllerMockRecorder
+	recorder *MockimageControllerMockRecorder
 }
 
-// MockImageControllerMockRecorder is the mock recorder for MockImageController
-type MockImageControllerMockRecorder struct {
-	mock *MockImageController
+// MockimageControllerMockRecorder is the mock recorder for MockimageController
+type MockimageControllerMockRecorder struct {
+	mock *MockimageController
 }
 
-// NewMockImageController creates a new mock instance
-func NewMockImageController(ctrl *gomock.Controller) *MockImageController {
-	mock := &MockImageController{ctrl: ctrl}
-	mock.recorder = &MockImageControllerMockRecorder{mock}
+// NewMockimageController creates a new mock instance
+func NewMockimageController(ctrl *gomock.Controller) *MockimageController {
+	mock := &MockimageController{ctrl: ctrl}
+	mock.recorder = &MockimageControllerMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockImageController) EXPECT() *MockImageControllerMockRecorder {
+func (m *MockimageController) EXPECT() *MockimageControllerMockRecorder {
 	return m.recorder
 }
 
 // Bytes mocks base method
-func (m *MockImageController) Bytes() []byte {
+func (m *MockimageController) Bytes() []byte {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Bytes")
 	ret0, _ := ret[0].([]byte)
@@ -41,13 +41,13 @@ func (m *MockImageController) Bytes() []byte {
 }
 
 // Bytes indicates an expected call of Bytes
-func (mr *MockImageControllerMockRecorder) Bytes() *gomock.Call {
+func (mr *MockimageControllerMockRecorder) Bytes() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Bytes", reflect.TypeOf((*MockImageController)(nil).Bytes))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Bytes", reflect.TypeOf((*MockimageController)(nil).Bytes))
 }
 
 // Convert mocks base method
-func (m *MockImageController) Convert(arg0 string) error {
+func (m *MockimageController) Convert(arg0 string) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Convert", arg0)
 	ret0, _ := ret[0].(error)
@@ -55,25 +55,25 @@ func (m *MockImageController) Convert(arg0 string) error {
 }
 
 // Convert indicates an expected call of Convert
-func (mr *MockImageControllerMockRecorder) Convert(arg0 interface{}) *gomock.Call {
+func (mr *MockimageControllerMockRecorder) Convert(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Convert", reflect.TypeOf((*MockImageController)(nil).Convert), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Convert", reflect.TypeOf((*MockimageController)(nil).Convert), arg0)
 }
 
 // Destroy mocks base method
-func (m *MockImageController) Destroy() {
+func (m *MockimageController) Destroy() {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "Destroy")
 }
 
 // Destroy indicates an expected call of Destroy
-func (mr *MockImageControllerMockRecorder) Destroy() *gomock.Call {
+func (mr *MockimageControllerMockRecorder) Destroy() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Destroy", reflect.TypeOf((*MockImageController)(nil).Destroy))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Destroy", reflect.TypeOf((*MockimageController)(nil).Destroy))
 }
 
 // Format mocks base method
-func (m *MockImageController) Format() string {
+func (m *MockimageController) Format() string {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Format")
 	ret0, _ := ret[0].(string)
@@ -81,13 +81,13 @@ func (m *MockImageController) Format() string {
 }
 
 // Format indicates an expected call of Format
-func (mr *MockImageControllerMockRecorder) Format() *gomock.Call {
+func (mr *MockimageControllerMockRecorder) Format() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Format", reflect.TypeOf((*MockImageController)(nil).Format))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Format", reflect.TypeOf((*MockimageController)(nil).Format))
 }
 
 // MainColor mocks base method
-func (m *MockImageController) MainColor() (uint, uint, uint, error) {
+func (m *MockimageController) MainColor() (uint, uint, uint, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "MainColor")
 	ret0, _ := ret[0].(uint)
@@ -98,13 +98,13 @@ func (m *MockImageController) MainColor() (uint, uint, uint, error) {
 }
 
 // MainColor indicates an expected call of MainColor
-func (mr *MockImageControllerMockRecorder) MainColor() *gomock.Call {
+func (mr *MockimageControllerMockRecorder) MainColor() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MainColor", reflect.TypeOf((*MockImageController)(nil).MainColor))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MainColor", reflect.TypeOf((*MockimageController)(nil).MainColor))
 }
 
 // Resize mocks base method
-func (m *MockImageController) Resize(arg0, arg1 uint) error {
+func (m *MockimageController) Resize(arg0, arg1 uint) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Resize", arg0, arg1)
 	ret0, _ := ret[0].(error)
@@ -112,13 +112,13 @@ func (m *MockImageController) Resize(arg0, arg1 uint) error {
 }
 
 // Resize indicates an expected call of Resize
-func (mr *MockImageControllerMockRecorder) Resize(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockimageControllerMockRecorder) Resize(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Resize", reflect.TypeOf((*MockImageController)(nil).Resize), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Resize", reflect.TypeOf((*MockimageController)(nil).Resize), arg0, arg1)
 }
 
 // SetQuality mocks base method
-func (m *MockImageController) SetQuality(arg0 uint) error {
+func (m *MockimageController) SetQuality(arg0 uint) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "SetQuality", arg0)
 	ret0, _ := ret[0].(error)
@@ -126,13 +126,13 @@ func (m *MockImageController) SetQuality(arg0 uint) error {
 }
 
 // SetQuality indicates an expected call of SetQuality
-func (mr *MockImageControllerMockRecorder) SetQuality(arg0 interface{}) *gomock.Call {
+func (mr *MockimageControllerMockRecorder) SetQuality(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetQuality", reflect.TypeOf((*MockImageController)(nil).SetQuality), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetQuality", reflect.TypeOf((*MockimageController)(nil).SetQuality), arg0)
 }
 
 // StripEXIF mocks base method
-func (m *MockImageController) StripEXIF() error {
+func (m *MockimageController) StripEXIF() error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "StripEXIF")
 	ret0, _ := ret[0].(error)
@@ -140,7 +140,7 @@ func (m *MockImageController) StripEXIF() error {
 }
 
 // StripEXIF indicates an expected call of StripEXIF
-func (mr *MockImageControllerMockRecorder) StripEXIF() *gomock.Call {
+func (mr *MockimageControllerMockRecorder) StripEXIF() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StripEXIF", reflect.TypeOf((*MockImageController)(nil).StripEXIF))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StripEXIF", reflect.TypeOf((*MockimageController)(nil).StripEXIF))
 }
