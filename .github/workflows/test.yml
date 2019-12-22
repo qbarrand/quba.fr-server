@@ -20,8 +20,11 @@ jobs:
 
     - name: Install mockgen
       run: go get github.com/golang/mock/mockgen
+
+    - run: make
+
+    - run: make test
       env:
         PATH: "$(go env GOPATH)/bin"
 
-    - run: make
-    - run: make test
+
