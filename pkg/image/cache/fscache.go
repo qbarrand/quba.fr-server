@@ -9,14 +9,75 @@ import (
 	"path/filepath"
 )
 
-type FsCache string
-
-func New(path string) FsCache {
-	return FsCache(path)
+type Item struct {
+	Data      io.ReadCloser `json:"-"`
+	Hash      string        `json:"hash"`
+	MainColor string        `json:"main_color"`
 }
 
+func (i *Item) writeToFile(path string, data io.Reader) error {
+	metadataPath := getMetadataFile(path)
+
+	fdMeta, err := os.Create(metadataPath)
+	if err != nil {
+		return fmt.Errorf("could not create file %s: %v", metadataPath, err)
+	}
+	defer fdMeta.Close()
+
+	if err := json.NewEncoder(fdMeta).Encode(i); err != nil {
+		return fmt.Errorf("could not encode: %v", err)
+	}
+
+	fdData, err := os.Create(path)
+	if err != nil {
+		return fmt.Errorf("could not create file %s, %v", path, err)
+	}
+	defer fdData.Close()
+
+	if _, err := bufio.NewReader(data).WriteTo(fdData); err != nil {
+		return fmt.Errorf("could not write the data to %s: %v", path, err)
+	}
+
+	return nil
+}
+
+func readItem(path string) (*Item, error) {
+	metadataPath := getMetadataFile(path)
+
+	fdMeta, err := os.Open(metadataPath)
+	if err != nil {
+		return nil, fmt.Errorf("could not read the metadata: %v", err)
+	}
+	defer fdMeta.Close()
+
+	item := &Item{}
+
+	if err := json.NewDecoder(fdMeta).Decode(item); err != nil {
+		return nil, fmt.Errorf("could not decode the metadata at %s: %v", metadataPath, err)
+	}
+
+	fdData, err := os.Open(path)
+	if err != nil {
+		return nil, fmt.Errorf("could not read the data: %v", err)
+	}
+
+	item.Data = fdData
+
+	return item, nil
+}
+
+func getMetadataFile(path string) string {
+	return path + ".meta.json"
+}
+
+type Key interface {
+	FsPath() string
+}
+
+type FsCache string
+
 func (c FsCache) Add(key Key, r io.Reader, mainColor, hash string) error {
-	path := c.getDataFile(key)
+	path := c.filePath(key)
 
 	// Create the parent directory
 	if err := os.MkdirAll(filepath.Dir(path), os.ModeDir|0755); err != nil {
@@ -33,71 +94,20 @@ func (c FsCache) Add(key Key, r io.Reader, mainColor, hash string) error {
 		return err
 	}
 
-	m := &jsonMetadata{
-		HashStr:      hash,
-		MainColorStr: mainColor,
+	item := &Item{
+		Hash:      hash,
+		MainColor: mainColor,
 	}
 
-	return m.writeFile(getMetadataFile(path))
+	return item.writeToFile(path, r)
 }
 
-func (c FsCache) Get(key Key) (io.ReadCloser, Metadata, error) {
-	path := c.getDataFile(key)
-
-	fd, err := os.Open(path)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	m, err := readJSONMetadata(getMetadataFile(path))
-	if err != nil {
-		// Close fd here
-		fd.Close()
-
-		return nil, nil, err
-	}
-
-	return fd, m, nil
+func (c FsCache) Get(key Key) (*Item, error) {
+	return readItem(
+		c.filePath(key),
+	)
 }
 
-func (c FsCache) getDataFile(key Key) string {
-	return filepath.Join(string(c), key.Key())
-}
-
-func getMetadataFile(path string) string {
-	return path + ".meta.json"
-}
-
-type jsonMetadata struct {
-	HashStr      string `json:"hash"`
-	MainColorStr string `json:"main_color"`
-}
-
-func (m *jsonMetadata) Hash() string {
-	return m.HashStr
-}
-
-func (m *jsonMetadata) MainColor() string {
-	return m.MainColorStr
-}
-
-func (m *jsonMetadata) writeFile(path string) error {
-	fd, err := os.Create(path)
-	if err != nil {
-		return err
-	}
-
-	return json.NewEncoder(fd).Encode(m)
-}
-
-func readJSONMetadata(path string) (*jsonMetadata, error) {
-	fd, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer fd.Close()
-
-	m := &jsonMetadata{}
-
-	return m, json.NewDecoder(fd).Decode(m)
+func (c FsCache) filePath(key Key) string {
+	return filepath.Join(string(c), key.FsPath())
 }

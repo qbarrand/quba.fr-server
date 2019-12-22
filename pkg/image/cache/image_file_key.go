@@ -1,7 +1,6 @@
 package cache
 
 import (
-	"path/filepath"
 	"strconv"
 	"strings"
 )
@@ -24,13 +23,10 @@ func NewImageFileKey(f string, w, h int, q uint, fmt string) *ImageFileKey {
 	}
 }
 
-func (ifk *ImageFileKey) Key() string {
-	ext := filepath.Ext(ifk.filename)
-	name := strings.TrimSuffix(ifk.filename, ext)
-
+func (ifk *ImageFileKey) FsPath() string {
 	widthStr := strconv.Itoa(ifk.width)
 	heightStr := strconv.Itoa(ifk.height)
 	qualityStr := strconv.Itoa(int(ifk.quality))
 
-	return strings.Join([]string{name, widthStr, heightStr, qualityStr, ifk.format}, "_") + ext
+	return strings.Join([]string{ifk.filename, widthStr, heightStr, qualityStr, ifk.format}, "_")
 }

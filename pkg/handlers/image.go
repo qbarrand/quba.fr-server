@@ -1,8 +1,8 @@
 package handlers
 
 import (
+	"bufio"
 	"bytes"
-	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -14,6 +14,11 @@ import (
 	img "git.quba.fr/qbarrand/quba.fr-server/pkg/image"
 	"git.quba.fr/qbarrand/quba.fr-server/pkg/image/cache"
 )
+
+type Cache interface {
+	Add(cache.Key, io.Reader, string, string) error
+	Get(cache.Key) (*cache.Item, error)
+}
 
 func getPreferredIMFormat(accept string) string {
 	for _, MIMEType := range strings.Split(accept, ",") {
@@ -94,12 +99,12 @@ func parseDimensions(r *http.Request) (uint, uint, error) {
 
 type Image struct {
 	baseDir             string
-	cache               cache.Cache
+	cache               Cache
 	imageControllerCtor func(string) (imageController, error)
 	quality             uint
 }
 
-func NewImage(baseDir string, cache cache.Cache, quality uint) *Image {
+func NewImage(baseDir string, cache Cache, quality uint) *Image {
 	imageProcessorCtor := func(path string) (imageController, error) {
 		p, err := img.NewImagickProcessor(path)
 		if err != nil {
@@ -147,15 +152,20 @@ func (i Image) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if i.cache == nil {
 		log.Print("Cache not used")
 	} else {
-		cachedImgReader, metadata, err := i.cache.Get(key)
-
-		_ = cachedImgReader
-		_ = metadata
-
-		if err == nil {
-			// TODO
+		item, err := i.cache.Get(key)
+		if err != nil || item == nil { // TODO: check if it's fine to check if item is nil
+			log.Printf("item not found in the cache")
+			goto nocache
 		}
+
+		if err := writeFromStream(w, bufio.NewReader(item.Data), item.Hash, item.MainColor); err != nil {
+			log.Printf("could not write the response from the cache: %v", err)
+		}
+
+		return
 	}
+
+nocache:
 
 	// Otherwise, serve the Image normally
 	log.Printf("Could not get the Image from the cache: %v", err)
@@ -168,7 +178,6 @@ func (i Image) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
-
 	defer p.Destroy()
 
 	log.Printf("ImageMagick format: %q", imFormat)
@@ -222,18 +231,10 @@ func (i Image) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	if i.cache != nil {
 		if err := i.cache.Add(key, rd, mainColorHexRGB, hash); err != nil {
-			log.Printf("Could not add the Image to the cache: %v", err)
+			log.Printf("Could not add the image to the cache: %v", err)
 		}
 	}
 }
-
-func serveFromCache(w http.ResponseWriter, r io.Reader, metadata cache.Metadata) error {
-	return errors.New("not implemented")
-}
-
-//func serveFromController(w http.ResponseWriter, path string) error {
-//
-//}
 
 func writeFromStream(w http.ResponseWriter, r io.WriterTo, ETag, mainColor string) error {
 	headers := w.Header()
