@@ -1,10 +1,7 @@
 package handlers
 
 import (
-	"bufio"
-	"bytes"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
 	"path/filepath"
@@ -12,13 +9,7 @@ import (
 	"strings"
 
 	img "git.quba.fr/qbarrand/quba.fr-server/pkg/image"
-	"git.quba.fr/qbarrand/quba.fr-server/pkg/image/cache"
 )
-
-type Cache interface {
-	Add(cache.Key, io.Reader, string, string) error
-	Get(cache.Key) (*cache.Item, error)
-}
 
 func getPreferredIMFormat(accept string) string {
 	for _, MIMEType := range strings.Split(accept, ",") {
@@ -99,12 +90,12 @@ func parseDimensions(r *http.Request) (uint, uint, error) {
 
 type Image struct {
 	baseDir             string
-	cache               Cache
+	bytesHasher         func([]byte) (string, error)
 	imageControllerCtor func(string) (imageController, error)
 	quality             uint
 }
 
-func NewImage(baseDir string, cache Cache, quality uint) *Image {
+func NewImage(baseDir string, quality uint) *Image {
 	imageProcessorCtor := func(path string) (imageController, error) {
 		p, err := img.NewImagickProcessor(path)
 		if err != nil {
@@ -116,7 +107,7 @@ func NewImage(baseDir string, cache Cache, quality uint) *Image {
 
 	return &Image{
 		baseDir:             baseDir,
-		cache:               cache,
+		bytesHasher:         hashBytes,
 		imageControllerCtor: imageProcessorCtor,
 		quality:             quality,
 	}
@@ -144,32 +135,6 @@ func (i Image) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	filePath := r.URL.Path
-	ifNoneMatchHeader := r.Header.Get("If-None-Match")
-
-	// Use this cache key to either get the image from the cache, or to store the controller's output.
-	key := cache.NewImageFileKey(filePath, int(width), int(height), i.quality, imFormat)
-
-	if i.cache == nil {
-		log.Print("Cache not used")
-	} else {
-		item, err := i.cache.Get(key)
-		if err != nil || item == nil { // TODO: check if it's fine to check if item is nil
-			log.Printf("item not found in the cache")
-			goto nocache
-		}
-
-		if err := writeFromStream(w, bufio.NewReader(item.Data), item.Hash, item.MainColor); err != nil {
-			log.Printf("could not write the response from the cache: %v", err)
-		}
-
-		return
-	}
-
-nocache:
-
-	// Otherwise, serve the Image normally
-	log.Printf("Could not get the Image from the cache: %v", err)
-
 	imagePath := filepath.Join(i.baseDir, filePath)
 
 	p, err := i.imageControllerCtor(imagePath)
@@ -205,49 +170,21 @@ nocache:
 
 	imageBytes := p.Bytes()
 
-	hash, err := cache.HashBytes(imageBytes)
+	hash, err := i.bytesHasher(imageBytes)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		log.Printf("Could not hash the file: %v", err)
+		log.Printf("Could not hash the reponse bytes: %v", err)
+	} else if r.Header.Get("If-None-Match") == hash {
+		w.WriteHeader(http.StatusNotModified)
 		return
 	}
 
-	if hash == ifNoneMatchHeader {
-		log.Printf("cached")
-	}
-
-	mainColorHexRGB := fmt.Sprintf("#%02X%02X%02X", cr, cg, cb)
-
-	rd := bytes.NewReader(imageBytes)
-
-	if err := writeFromStream(w, rd, hash, mainColorHexRGB); err != nil {
-		log.Print(err)
-	}
-
-	if _, err := rd.Seek(0, 0); err != nil {
-		log.Printf("Could not Seek() to the beginning of the file: %v", err)
-		return
-	}
-
-	if i.cache != nil {
-		if err := i.cache.Add(key, rd, mainColorHexRGB, hash); err != nil {
-			log.Printf("Could not add the image to the cache: %v", err)
-		}
-	}
-}
-
-func writeFromStream(w http.ResponseWriter, r io.WriterTo, ETag, mainColor string) error {
 	headers := w.Header()
+	headers.Set("ETag", hash)
+	headers.Set("X-Main-Color", fmt.Sprintf("#%02X%02X%02X", cr, cg, cb))
 
-	headers.Set("ETag", ETag)
-	headers.Set("X-Main-Color", mainColor)
-
-	n, err := r.WriteTo(w)
-	if err != nil {
-		return fmt.Errorf("could not write the reply: %v", err)
+	if n, err := w.Write(imageBytes); err != nil {
+		log.Printf("could not write the reply: %v", err)
+	} else {
+		log.Printf("Wrote %d bytes", n)
 	}
-
-	log.Printf("Wrote %d bytes", n)
-
-	return nil
 }

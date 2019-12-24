@@ -1,11 +1,11 @@
-package cache
+package handlers
 
 import (
 	"encoding/hex"
 	"hash/fnv"
 )
 
-func HashBytes(b []byte) (string, error) {
+func hashBytes(b []byte) (string, error) {
 	h := fnv.New64a()
 
 	if _, err := h.Write(b); err != nil {
