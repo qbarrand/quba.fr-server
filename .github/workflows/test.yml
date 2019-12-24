@@ -18,5 +18,16 @@ jobs:
     - name: Check out code into the Go module directory
       uses: actions/checkout@v1
 
-    - run: go vet ./...
-    - run: go test ./...
+    - name: Install mockgen
+      run: |
+        go get github.com/golang/mock/mockgen
+        echo "::add-path::$(go env GOPATH)/bin"
+
+    - run: make
+
+    - run: make coverage.txt
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v1
+      with:
+        token: ${{ secrets.CODECOV_UPLOAD_TOKEN }}
