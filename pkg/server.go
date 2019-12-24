@@ -1,8 +1,6 @@
 package pkg
 
 import (
-	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
 
@@ -20,20 +18,7 @@ func Logger(next http.Handler) http.Handler {
 	})
 }
 
-func StartServer(addr, dir string, quality uint, cacheDir string) error {
-	if cacheDir == "" {
-		log.Printf("cacheDir not specified; using a random temporary directory")
-
-		tempDir, err := ioutil.TempDir("", "quba.fr-")
-		if err != nil {
-			return fmt.Errorf("could not get a temporary directory: %v", err)
-		}
-
-		cacheDir = tempDir
-
-		log.Printf("Using %q as the cache directory", cacheDir)
-	}
-
+func StartServer(addr, dir string, quality uint) error {
 	imagick.Initialize()
 	defer imagick.Terminate()
 
