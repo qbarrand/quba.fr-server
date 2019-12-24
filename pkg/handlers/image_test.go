@@ -79,6 +79,11 @@ func TestImage_ServeHTTP(t *testing.T) {
 		if res.StatusCode != http.StatusOK {
 			t.Fatalf("Got HTTP %d", res.StatusCode)
 		}
+
+		// Check that Content-Length is defined
+		if res.Header.Get("Content-Length") == "" {
+			t.Fatal("Content-Length undefined")
+		}
 	})
 
 	t.Run("Resize to 1920w and Accept: image/webp", func(t *testing.T) {

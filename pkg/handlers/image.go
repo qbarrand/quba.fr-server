@@ -181,6 +181,7 @@ func (i Image) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	headers := w.Header()
 	headers.Set("ETag", hash)
 	headers.Set("X-Main-Color", fmt.Sprintf("#%02X%02X%02X", cr, cg, cb))
+	headers.Set("Content-Length", strconv.Itoa(len(imageBytes)))
 
 	if n, err := w.Write(imageBytes); err != nil {
 		log.Printf("could not write the reply: %v", err)
