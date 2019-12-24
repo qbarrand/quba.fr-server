@@ -1,14 +1,24 @@
-.PHONY: test
+.PHONY: vet
 
 all: server
 
 run: server
 	./server
 
-server: $(wildcard go.mod go.sum *.go **/*.go)
+server: go.mod go.sum $(wildcard *.go **/*.go)
 	go build -o server
 
-test:
+generate: $(wildcard *.go **/*.go)
 	go generate ./...
+
+vet:
 	go vet ./...
+
+test: vet generate
 	go test ./...
+
+coverage.txt: vet generate go.mod go.sum
+	go test ./... -race -coverprofile=$@ -covermode=atomic
+
+clean:
+	rm -f server
