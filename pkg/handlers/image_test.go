@@ -64,7 +64,6 @@ func TestImage_ServeHTTP(t *testing.T) {
 		}
 
 		gomock.InOrder(
-			m.EXPECT().Resize(uint(0), uint(0)),
 			m.EXPECT().SetQuality(uint(80)),
 			m.EXPECT().Convert("webp"),
 			m.EXPECT().MainColor(),

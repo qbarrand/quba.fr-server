@@ -72,28 +72,26 @@ func (imp *ImageMagickProcessor) Resize(height, width uint) error {
 	// Resizing
 	//
 
-	if height != 0 || width != 0 {
-		oHeight := imp.mw.GetImageHeight()
-		oWidth := imp.mw.GetImageWidth()
+	oHeight := imp.mw.GetImageHeight()
+	oWidth := imp.mw.GetImageWidth()
 
-		if width != 0 {
-			ratio := float64(width) / float64(oWidth)
-			height = uint(float64(oHeight) * ratio)
-			goto resize
-		}
+	if width != 0 {
+		ratio := float64(width) / float64(oWidth)
+		height = uint(float64(oHeight) * ratio)
+		goto resize
+	}
 
-		if height != 0 {
-			ratio := float64(height) / float64(oHeight)
-			width = uint(float64(oWidth) * ratio)
-			goto resize
-		}
+	if height != 0 {
+		ratio := float64(height) / float64(oHeight)
+		width = uint(float64(oWidth) * ratio)
+		goto resize
+	}
 
-	resize:
-		log.Printf("Resizing to %dx%d", width, height)
+resize:
+	log.Printf("Resizing to %dx%d", width, height)
 
-		if err := imp.mw.AdaptiveResizeImage(width, height); err != nil {
-			return fmt.Errorf("Could not resize the image to %dx%d: %v", width, height, err)
-		}
+	if err := imp.mw.AdaptiveResizeImage(width, height); err != nil {
+		return fmt.Errorf("Could not resize the image to %dx%d: %v", width, height, err)
 	}
 
 	//

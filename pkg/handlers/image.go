@@ -147,10 +147,12 @@ func (i Image) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("ImageMagick format: %q", imFormat)
 
-	if err := p.Resize(height, width); err != nil {
-		log.Printf("Could not resize the Image: %v", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
+	if height != 0 || width != 0 {
+		if err := p.Resize(height, width); err != nil {
+			log.Printf("Could not resize the Image: %v", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 	}
 
 	if err := p.SetQuality(i.quality); err != nil {
