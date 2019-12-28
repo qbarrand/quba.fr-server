@@ -11,21 +11,25 @@ import (
 	img "git.quba.fr/qbarrand/quba.fr-server/pkg/image"
 )
 
-func getPreferredIMFormat(accept string) string {
-	for _, MIMEType := range strings.Split(accept, ",") {
-		MIMEType = strings.Trim(MIMEType, " ")
+func getPreferredIMFormat(accept string) (mimeType string, imFormat string) {
+	for _, mimeType = range strings.Split(accept, ",") {
+		mimeType = strings.Trim(mimeType, " ")
 
-		switch MIMEType {
+		switch mimeType {
 		case "image/jpeg":
-			return "jpg"
+			imFormat = "jpg"
 		case "image/webp":
-			return "webp"
+			imFormat = "webp"
 		case "image/vnd.ms-photo", "image/jxr":
-			return "jxr"
+			imFormat = "jxr"
+		}
+
+		if imFormat != "" {
+			return
 		}
 	}
 
-	return ""
+	return
 }
 
 // func mimeToIMFormat(mimeType string) (string, error) {
@@ -127,10 +131,10 @@ func (i Image) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	log.Print("Accept: " + accept)
 
-	imFormat := getPreferredIMFormat(accept)
+	mimeType, imFormat := getPreferredIMFormat(accept)
 	if imFormat == "" {
 		log.Printf("No accepted format among %q", accept)
-		w.WriteHeader(http.StatusBadRequest)
+		w.WriteHeader(http.StatusNotAcceptable)
 		return
 	}
 
@@ -184,6 +188,7 @@ func (i Image) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	headers.Set("ETag", hash)
 	headers.Set("X-Main-Color", fmt.Sprintf("#%02X%02X%02X", cr, cg, cb))
 	headers.Set("Content-Length", strconv.Itoa(len(imageBytes)))
+	headers.Set("Content-Type", mimeType)
 
 	if n, err := w.Write(imageBytes); err != nil {
 		log.Printf("could not write the reply: %v", err)

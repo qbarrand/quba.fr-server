@@ -3,10 +3,8 @@
 package handlers
 
 import (
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -21,7 +19,21 @@ func TestImage(t *testing.T) {
 }
 
 func TestImage_ServeHTTP(t *testing.T) {
-	t.Run("no accept: HTTP 400", func(t *testing.T) {
+	checkContentLength := func(t *testing.T, res *http.Response) {
+		if res.Header.Get("Content-Length") == "" {
+			t.Fatal("Content-Length undefined")
+		}
+	}
+
+	checkContentType := func(t *testing.T, res *http.Response, expected string) {
+		got := res.Header.Get("Content-Type")
+
+		if got != expected {
+			t.Fatalf("Unexpected Content-Type: expected %q, got %q", expected, got)
+		}
+	}
+
+	t.Run("no accept: HTTP 406", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/non-existent-file.jpg", nil)
 		w := httptest.NewRecorder()
 
@@ -29,7 +41,7 @@ func TestImage_ServeHTTP(t *testing.T) {
 
 		res := w.Result()
 
-		if res.StatusCode != http.StatusBadRequest {
+		if res.StatusCode != http.StatusNotAcceptable {
 			t.Fatalf("Got HTTP %d", res.StatusCode)
 		}
 	})
@@ -79,10 +91,8 @@ func TestImage_ServeHTTP(t *testing.T) {
 			t.Fatalf("Got HTTP %d", res.StatusCode)
 		}
 
-		// Check that Content-Length is defined
-		if res.Header.Get("Content-Length") == "" {
-			t.Fatal("Content-Length undefined")
-		}
+		checkContentLength(t, res)
+		checkContentType(t, res, "image/webp")
 	})
 
 	t.Run("Resize to 1920w and Accept: image/webp", func(t *testing.T) {
@@ -98,12 +108,6 @@ func TestImage_ServeHTTP(t *testing.T) {
 			quality = 50
 			width   = 1920
 		)
-
-		tempDir, err := ioutil.TempDir("", "")
-		if err != nil {
-			t.Fatalf("Could not create a temporary cache directory: %v", err)
-		}
-		defer os.RemoveAll(tempDir)
 
 		controller := gomock.NewController(t)
 		mockIC := mock_handlers.NewMockimageController(controller)
@@ -129,5 +133,84 @@ func TestImage_ServeHTTP(t *testing.T) {
 		if res.StatusCode != http.StatusOK {
 			t.Fatalf("Got HTTP %d", res.StatusCode)
 		}
+
+		checkContentLength(t, res)
+		checkContentType(t, res, "image/webp")
 	})
+
+	t.Run("Resize to 1920w and Accept: image/jpeg", func(t *testing.T) {
+		req := httptest.NewRequest(
+			http.MethodGet,
+			"/gopher_biplane.jpg?width=1920",
+			nil)
+		req.Header.Set("Accept", "image/jpeg")
+
+		w := httptest.NewRecorder()
+
+		const (
+			quality = 50
+			width   = 1920
+		)
+
+		controller := gomock.NewController(t)
+		mockIC := mock_handlers.NewMockimageController(controller)
+
+		i := NewImage("testdata", quality)
+		i.imageControllerCtor = func(string) (imageController, error) {
+			return mockIC, nil
+		}
+
+		gomock.InOrder(
+			mockIC.EXPECT().Resize(uint(0), uint(width)),
+			mockIC.EXPECT().SetQuality(uint(quality)),
+			mockIC.EXPECT().Convert("jpg"),
+			mockIC.EXPECT().MainColor().Return(uint(0), uint(0), uint(0), nil),
+			mockIC.EXPECT().Bytes(),
+			mockIC.EXPECT().Destroy(),
+		)
+
+		i.ServeHTTP(w, req)
+
+		res := w.Result()
+
+		if res.StatusCode != http.StatusOK {
+			t.Fatalf("Got HTTP %d", res.StatusCode)
+		}
+
+		checkContentLength(t, res)
+		checkContentType(t, res, "image/jpeg")
+	})
+}
+
+func Test_getPreferredHeader(t *testing.T) {
+	cases := []struct {
+		input        string
+		expectedMIME string
+		expectedIM   string
+	}{
+		{
+			input:        "image/jpeg,image/webp",
+			expectedMIME: "image/jpeg",
+			expectedIM:   "jpg",
+		},
+		{
+			input:        "image/webp,image/jpeg",
+			expectedMIME: "image/webp",
+			expectedIM:   "webp",
+		},
+	}
+
+	for _, c := range cases {
+		t.Run(c.input, func(t *testing.T) {
+			mimeType, imFormat := getPreferredIMFormat(c.input)
+
+			if mimeType != c.expectedMIME {
+				t.Fatalf("Unexpected MIME type: expected %q, got %q", c.expectedMIME, mimeType)
+			}
+
+			if imFormat != c.expectedIM {
+				t.Fatalf("Unexpected IM format: expected %q, got %q", c.expectedIM, imFormat)
+			}
+		})
+	}
 }
