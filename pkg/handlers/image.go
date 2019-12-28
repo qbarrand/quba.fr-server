@@ -11,47 +11,21 @@ import (
 	img "git.quba.fr/qbarrand/quba.fr-server/pkg/image"
 )
 
-func getPreferredIMFormat(accept string) string {
-	for _, MIMEType := range strings.Split(accept, ",") {
-		MIMEType = strings.Trim(MIMEType, " ")
+func getPreferredIMFormat(accept string) (string, string) {
+	for _, mimeType := range strings.Split(accept, ",") {
+		mimeType = strings.Trim(mimeType, " ")
 
-		switch MIMEType {
+		switch mimeType {
 		case "image/jpeg":
-			return "jpg"
+			return mimeType, "jpg"
 		case "image/webp":
-			return "webp"
+			return mimeType, "webp"
 		case "image/vnd.ms-photo", "image/jxr":
-			return "jxr"
+			return mimeType, "jxr"
 		}
 	}
 
-	return ""
-}
-
-// func mimeToIMFormat(mimeType string) (string, error) {
-// 	switch mimeType {
-// 	case "image/jpeg":
-// 		return "jpg", nil
-// 	case "image/webp":
-// 		return "webp", nil
-// 	case "image/vnd.ms-photo", "image/jxr":
-// 		return "jxr", nil
-// 	default:
-// 		return "", fmt.Errorf("%q: unhandled MIME type", mimeType)
-// 	}
-// }
-
-func imFormatToMIME(imFormat string) (string, error) {
-	switch imFormat {
-	case "jpg":
-		return "image/jpeg", nil
-	case "jxr":
-		return "image/jxr", nil
-	case "webp":
-		return "image/webp", nil
-	default:
-		return "", fmt.Errorf("%q: unhandled ImageMagick format", imFormat)
-	}
+	return "", ""
 }
 
 func parseDimensions(r *http.Request) (uint, uint, error) {
@@ -127,10 +101,10 @@ func (i Image) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	log.Print("Accept: " + accept)
 
-	imFormat := getPreferredIMFormat(accept)
+	mimeType, imFormat := getPreferredIMFormat(accept)
 	if imFormat == "" {
 		log.Printf("No accepted format among %q", accept)
-		w.WriteHeader(http.StatusBadRequest)
+		w.WriteHeader(http.StatusNotAcceptable)
 		return
 	}
 
@@ -184,6 +158,7 @@ func (i Image) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	headers.Set("ETag", hash)
 	headers.Set("X-Main-Color", fmt.Sprintf("#%02X%02X%02X", cr, cg, cb))
 	headers.Set("Content-Length", strconv.Itoa(len(imageBytes)))
+	headers.Set("Content-Type", mimeType)
 
 	if n, err := w.Write(imageBytes); err != nil {
 		log.Printf("could not write the reply: %v", err)
