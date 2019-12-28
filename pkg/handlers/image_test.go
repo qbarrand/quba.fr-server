@@ -198,6 +198,26 @@ func Test_getPreferredHeader(t *testing.T) {
 			expectedMIME: "image/webp",
 			expectedIM:   "webp",
 		},
+		{
+			input:        "a,image/jpeg",
+			expectedMIME: "image/jpeg",
+			expectedIM:   "jpg",
+		},
+		{
+			input:        "a,b,text/plain,image/jpeg",
+			expectedMIME: "image/jpeg",
+			expectedIM:   "jpg",
+		},
+		{
+			input:        "a,b,c",
+			expectedMIME: "",
+			expectedIM:   "",
+		},
+		{
+			input:        "",
+			expectedMIME: "",
+			expectedIM:   "",
+		},
 	}
 
 	for _, c := range cases {

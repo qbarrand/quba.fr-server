@@ -11,25 +11,21 @@ import (
 	img "git.quba.fr/qbarrand/quba.fr-server/pkg/image"
 )
 
-func getPreferredIMFormat(accept string) (mimeType string, imFormat string) {
-	for _, mimeType = range strings.Split(accept, ",") {
+func getPreferredIMFormat(accept string) (string, string) {
+	for _, mimeType := range strings.Split(accept, ",") {
 		mimeType = strings.Trim(mimeType, " ")
 
 		switch mimeType {
 		case "image/jpeg":
-			imFormat = "jpg"
+			return mimeType, "jpg"
 		case "image/webp":
-			imFormat = "webp"
+			return mimeType, "webp"
 		case "image/vnd.ms-photo", "image/jxr":
-			imFormat = "jxr"
-		}
-
-		if imFormat != "" {
-			return
+			return mimeType, "jxr"
 		}
 	}
 
-	return
+	return "", ""
 }
 
 // func mimeToIMFormat(mimeType string) (string, error) {
