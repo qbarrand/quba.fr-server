@@ -28,32 +28,6 @@ func getPreferredIMFormat(accept string) (string, string) {
 	return "", ""
 }
 
-// func mimeToIMFormat(mimeType string) (string, error) {
-// 	switch mimeType {
-// 	case "image/jpeg":
-// 		return "jpg", nil
-// 	case "image/webp":
-// 		return "webp", nil
-// 	case "image/vnd.ms-photo", "image/jxr":
-// 		return "jxr", nil
-// 	default:
-// 		return "", fmt.Errorf("%q: unhandled MIME type", mimeType)
-// 	}
-// }
-
-func imFormatToMIME(imFormat string) (string, error) {
-	switch imFormat {
-	case "jpg":
-		return "image/jpeg", nil
-	case "jxr":
-		return "image/jxr", nil
-	case "webp":
-		return "image/webp", nil
-	default:
-		return "", fmt.Errorf("%q: unhandled ImageMagick format", imFormat)
-	}
-}
-
 func parseDimensions(r *http.Request) (uint, uint, error) {
 	var (
 		height uint
