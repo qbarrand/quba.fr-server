@@ -41,9 +41,6 @@ func StartServer(addr, dir string, quality uint) error {
 		HeadersRegexp("Accept", "image/(ico|jpeg|jxr|png|webp)").
 		Handler(imageHandler)
 
-	r.PathPrefix("/").
-		Handler(http.FileServer(http.Dir(dir)))
-
 	http.Handle("/", r)
 
 	return http.ListenAndServe(addr, nil)
