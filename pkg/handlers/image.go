@@ -156,9 +156,11 @@ func (i Image) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	headers := w.Header()
 	headers.Set("ETag", hash)
-	headers.Set("X-Main-Color", fmt.Sprintf("#%02X%02X%02X", cr, cg, cb))
 	headers.Set("Content-Length", strconv.Itoa(len(imageBytes)))
 	headers.Set("Content-Type", mimeType)
+	headers.Set("X-Date", p.ExifField("comment"))
+	headers.Set("X-Location", p.ExifField("Iptc4xmpCore:Location"))
+	headers.Set("X-Main-Color", fmt.Sprintf("#%02X%02X%02X", cr, cg, cb))
 
 	if n, err := w.Write(imageBytes); err != nil {
 		log.Printf("could not write the reply: %v", err)

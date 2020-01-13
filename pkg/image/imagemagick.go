@@ -30,6 +30,10 @@ func (imp *ImageMagickProcessor) Destroy() {
 	imp.mw.Destroy()
 }
 
+func (imp *ImageMagickProcessor) ExifField(name string) string {
+	return imp.mw.GetImageProperty(name)
+}
+
 func (imp *ImageMagickProcessor) Format() string {
 	return imp.mw.GetFormat()
 }
