@@ -80,6 +80,8 @@ func TestImage_ServeHTTP(t *testing.T) {
 			m.EXPECT().Convert("webp"),
 			m.EXPECT().MainColor(),
 			m.EXPECT().Bytes(),
+			m.EXPECT().ExifField("comment"),
+			m.EXPECT().ExifField("Iptc4xmpCore:Location"),
 			m.EXPECT().Destroy(),
 		)
 
@@ -123,6 +125,8 @@ func TestImage_ServeHTTP(t *testing.T) {
 			mockIC.EXPECT().Convert("webp"),
 			mockIC.EXPECT().MainColor().Return(uint(0), uint(0), uint(0), nil),
 			mockIC.EXPECT().Bytes(),
+			mockIC.EXPECT().ExifField("comment"),
+			mockIC.EXPECT().ExifField("Iptc4xmpCore:Location"),
 			mockIC.EXPECT().Destroy(),
 		)
 
@@ -166,6 +170,8 @@ func TestImage_ServeHTTP(t *testing.T) {
 			mockIC.EXPECT().Convert("jpg"),
 			mockIC.EXPECT().MainColor().Return(uint(0), uint(0), uint(0), nil),
 			mockIC.EXPECT().Bytes(),
+			mockIC.EXPECT().ExifField("comment"),
+			mockIC.EXPECT().ExifField("Iptc4xmpCore:Location"),
 			mockIC.EXPECT().Destroy(),
 		)
 

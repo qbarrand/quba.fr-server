@@ -72,6 +72,20 @@ func (mr *MockimageControllerMockRecorder) Destroy() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Destroy", reflect.TypeOf((*MockimageController)(nil).Destroy))
 }
 
+// ExifField mocks base method
+func (m *MockimageController) ExifField(arg0 string) string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ExifField", arg0)
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// ExifField indicates an expected call of ExifField
+func (mr *MockimageControllerMockRecorder) ExifField(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExifField", reflect.TypeOf((*MockimageController)(nil).ExifField), arg0)
+}
+
 // Format mocks base method
 func (m *MockimageController) Format() string {
 	m.ctrl.T.Helper()

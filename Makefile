@@ -1,4 +1,4 @@
-.PHONY: vet
+.PHONY: generate vet
 
 all: server
 
@@ -11,7 +11,7 @@ server: go.mod go.sum $(wildcard *.go **/*.go)
 generate: $(wildcard *.go **/*.go)
 	go generate ./...
 
-vet:
+vet: generate
 	go vet ./...
 
 test: vet generate
