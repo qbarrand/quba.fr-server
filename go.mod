@@ -1,6 +1,6 @@
 module git.quba.fr/qbarrand/quba.fr-server
 
-go 1.13
+go 1.14
 
 require (
 	github.com/golang/mock v1.3.1
