@@ -1,6 +1,6 @@
-FROM golang:buster as builder
+FROM golang:alpine as builder
 
-RUN apt update && apt install -y libmagickwand-6.q16-dev
+RUN apk add gcc imagemagick6-dev libc-dev
 RUN mkdir /build
 
 WORKDIR /build
@@ -10,9 +10,9 @@ COPY pkg ./pkg
 
 RUN go build -o main
 
-FROM debian:buster-slim
+FROM alpine
 
-RUN apt update && apt install -y libmagickwand-6.q16-6 git
+RUN apk add imagemagick6
 
 COPY --from=builder /build/main /
 
